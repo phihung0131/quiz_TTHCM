@@ -59,8 +59,8 @@ const QuizApp = () => {
       ""
     );
 
-    // Split out answers using A. B. C. D. pattern
-    const answerPattern = /([A-D])\.\s*([^\n]*)/g;
+    // Split out answers using A. B. C. D. pattern, capturing multi-line text
+    const answerPattern = /([A-D])\.\s*((?:(?![A-D]\.).)*)/gs;
     const matches = [...cleanedInput.matchAll(answerPattern)];
 
     // Find the question text (everything before the first answer)
@@ -68,7 +68,7 @@ const QuizApp = () => {
 
     // Parse answers
     const answers = matches.map((match) => ({
-      text: match[2].trim(),
+      text: match[2].replace(/\n/g, " ").trim(),
       is_correct: false,
     }));
 
@@ -135,16 +135,36 @@ const QuizApp = () => {
   };
 
   const handleAddQuestion = async () => {
-    if (newQuestion.question_text == "") {
+    if (newQuestion.question_text === "") {
       toast.error("Nhập câu hỏi dô lẹ lên!");
       return;
     }
 
-    console.log(newQuestion);
+    // Count correct answers
+    const correctAnswersCount = newQuestion.answers.filter(
+      (a) => a.is_correct
+    ).length;
+
+    // Check for no correct answer or multiple correct answers
+    if (correctAnswersCount !== 1) {
+      toast.error("Phải chọn ĐÚNG MỘT đáp án duy nhất!");
+      return;
+    }
+
+    // // Validate all answers have text
+    // const incompletedAnswers = newQuestion.answers.some(
+    //   (a) => a.text.trim() === ""
+    // );
+    // if (incompletedAnswers) {
+    //   toast.error("Vui lòng điền đầy đủ các đáp án!");
+    //   return;
+    // }
+
     await supabase.from("questions").insert(newQuestion);
 
     toast.success("Thêm câu hỏi thành công!");
     fetchQuestions();
+
     // Reset form
     setNewQuestion({
       question_text: "",
