@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   ShuffleIcon,
   TrashIcon,
   PlusCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "lucide-react";
-import 'bootstrap/dist/css/bootstrap.min.css';
 
-// Cấu hình Supabase
+// Supabase configuration
 const supabaseUrl = "https://pkttzivlgieogqzfoeqz.supabase.co";
 const supabaseAnonKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdHR6aXZsZ2llb2dxemZvZXF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMxMzQ2ODcsImV4cCI6MjA0ODcxMDY4N30.usBaRnShx_FqeaoFccbAp9KA4kq7233O5ThXUre-cTQ";
@@ -21,6 +25,7 @@ const QuizApp = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
+  const [rawQuestionInput, setRawQuestionInput] = useState("");
   const [newQuestion, setNewQuestion] = useState({
     question_text: "",
     answers: [
@@ -30,6 +35,10 @@ const QuizApp = () => {
       { text: "", is_correct: false },
     ],
   });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const questionsPerPage = 5;
 
   useEffect(() => {
     fetchQuestions();
@@ -41,6 +50,61 @@ const QuizApp = () => {
       const shuffledQuestions = data.sort(() => 0.5 - Math.random());
       setQuestions(shuffledQuestions);
     }
+  };
+
+  const parseQuestionInput = () => {
+    // Remove leading number and optional "Câu" or ":"
+    const cleanedInput = rawQuestionInput.replace(
+      /^(Câu\s*\d+\.*\s*:*\s*)/i,
+      ""
+    );
+
+    // Split out answers using A. B. C. D. pattern
+    const answerPattern = /([A-D])\.\s*([^A-D]*)/g;
+    const matches = [...cleanedInput.matchAll(answerPattern)];
+
+    // Find the question text (everything before the first answer)
+    const questionText = cleanedInput.split(/[A-D]\.\s*/)[0].trim();
+
+    // Parse answers
+    const answers = matches.map((match, index) => ({
+      text: match[2].trim(),
+      is_correct: false,
+    }));
+
+    setNewQuestion({
+      question_text: questionText,
+      answers:
+        answers.length > 0
+          ? answers
+          : [
+              { text: "", is_correct: false },
+              { text: "", is_correct: false },
+              { text: "", is_correct: false },
+              { text: "", is_correct: false },
+            ],
+    });
+
+    // Reset raw input
+    setRawQuestionInput("");
+  };
+
+  // Pagination calculations
+  const indexOfLastQuestion = currentPage * questionsPerPage;
+  const indexOfFirstQuestion = indexOfLastQuestion - questionsPerPage;
+  const currentQuestions = questions.slice(
+    indexOfFirstQuestion,
+    indexOfLastQuestion
+  );
+  const totalPages = Math.ceil(questions.length / questionsPerPage);
+
+  // Pagination handlers
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
   const handleAnswerSelect = (answer) => {
@@ -71,23 +135,26 @@ const QuizApp = () => {
   };
 
   const handleAddQuestion = async () => {
-    const { data, error } = await supabase
-      .from("questions")
-      .insert(newQuestion);
-
-    if (data) {
-      fetchQuestions();
-      // Reset form
-      setNewQuestion({
-        question_text: "",
-        answers: [
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-          { text: "", is_correct: false },
-        ],
-      });
+    if (newQuestion.question_text == "") {
+      toast.error("Nhập câu hỏi dô lẹ lên!");
+      return;
     }
+
+    console.log(newQuestion);
+    await supabase.from("questions").insert(newQuestion);
+
+    toast.success("Thêm câu hỏi thành công!");
+    fetchQuestions();
+    // Reset form
+    setNewQuestion({
+      question_text: "",
+      answers: [
+        { text: "", is_correct: false },
+        { text: "", is_correct: false },
+        { text: "", is_correct: false },
+        { text: "", is_correct: false },
+      ],
+    });
   };
 
   const handleDeleteQuestion = async (id) => {
@@ -97,7 +164,8 @@ const QuizApp = () => {
   };
 
   const renderQuizView = () => {
-    if (questions.length === 0) return <div className="text-center">Loading...</div>;
+    if (questions.length === 0)
+      return <div className="text-center">Loading...</div>;
 
     const currentQuestion = questions[currentQuestionIndex];
 
@@ -137,22 +205,22 @@ const QuizApp = () => {
             )}
 
             <div className="d-flex justify-content-between">
-              <button 
-                onClick={prevQuestion} 
+              <button
+                onClick={prevQuestion}
                 className="btn btn-outline-secondary"
               >
                 <ArrowLeftIcon size={20} />
               </button>
 
-              <button 
-                onClick={shuffleQuestions} 
+              <button
+                onClick={shuffleQuestions}
                 className="btn btn-outline-primary"
               >
                 <ShuffleIcon size={20} />
               </button>
 
-              <button 
-                onClick={nextQuestion} 
+              <button
+                onClick={nextQuestion}
                 className="btn btn-outline-secondary"
               >
                 <ArrowRightIcon size={20} />
@@ -170,8 +238,24 @@ const QuizApp = () => {
         <div className="card mb-4">
           <div className="card-body">
             <h5 className="card-title mb-4">Thêm Câu Hỏi Mới</h5>
+
+            <textarea
+              placeholder="Nhập câu hỏi nguyên văn (ví dụ: Câu 2. Quốc tế Cộng sản...)"
+              value={rawQuestionInput}
+              onChange={(e) => setRawQuestionInput(e.target.value)}
+              className="form-control mb-3"
+              rows="3"
+            />
+
+            <button
+              onClick={parseQuestionInput}
+              className="btn btn-primary mb-3"
+            >
+              Tách Câu Hỏi
+            </button>
+
             <input
-              placeholder="Nhập câu hỏi"
+              placeholder="Câu Hỏi"
               value={newQuestion.question_text}
               onChange={(e) =>
                 setNewQuestion({
@@ -222,11 +306,8 @@ const QuizApp = () => {
         <div className="card">
           <div className="card-body">
             <h5 className="card-title mb-4">Danh Sách Câu Hỏi</h5>
-            {questions.map((question) => (
-              <div
-                key={question.id}
-                className="card mb-3"
-              >
+            {currentQuestions.map((question) => (
+              <div key={question.id} className="card mb-3">
                 <div className="card-body d-flex justify-content-between align-items-start">
                   <div>
                     <h6 className="card-subtitle mb-2 text-muted">
@@ -252,6 +333,40 @@ const QuizApp = () => {
                 </div>
               </div>
             ))}
+
+            <nav className="d-flex justify-content-center">
+              <ul className="pagination">
+                <li
+                  className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeftIcon size={20} />
+                  </button>
+                </li>
+                <li className="page-item">
+                  <span className="page-link">
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                </li>
+                <li
+                  className={`page-item ${
+                    currentPage === totalPages ? "disabled" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={nextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRightIcon size={20} />
+                  </button>
+                </li>
+              </ul>
+            </nav>
           </div>
         </div>
       </div>
@@ -259,32 +374,45 @@ const QuizApp = () => {
   };
 
   return (
-    <div className="container mt-4">
-      <div className="row justify-content-center mb-4">
-        <div className="col-auto">
-          <div className="btn-group" role="group">
-            <button
-              onClick={() => setActiveView("quiz")}
-              className={`btn ${
-                activeView === "quiz" ? "btn-primary" : "btn-outline-primary"
-              }`}
-            >
-              Quiz
-            </button>
-            <button
-              onClick={() => setActiveView("manage")}
-              className={`btn ${
-                activeView === "manage" ? "btn-primary" : "btn-outline-primary"
-              }`}
-            >
-              Quản Lý
-            </button>
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
+
+      <div className="container mt-4">
+        <div className="row justify-content-center mb-4">
+          <div className="col-auto">
+            <div className="btn-group" role="group">
+              <button
+                onClick={() => setActiveView("quiz")}
+                className={`btn ${
+                  activeView === "quiz" ? "btn-primary" : "btn-outline-primary"
+                }`}
+              >
+                Quiz
+              </button>
+              <button
+                onClick={() => setActiveView("manage")}
+                className={`btn ${
+                  activeView === "manage"
+                    ? "btn-primary"
+                    : "btn-outline-primary"
+                }`}
+              >
+                Quản Lý
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {activeView === "quiz" ? renderQuizView() : renderManagementView()}
-    </div>
+        {activeView === "quiz" ? renderQuizView() : renderManagementView()}
+      </div>
+    </>
   );
 };
 
