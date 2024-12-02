@@ -60,29 +60,29 @@ const QuizApp = () => {
     );
 
     // Split out answers using A. B. C. D. pattern
-    const answerPattern = /([A-D])\.\s*([^A-D]*)/g;
+    const answerPattern = /([A-D])\.\s*([^\n]*)/g;
     const matches = [...cleanedInput.matchAll(answerPattern)];
 
     // Find the question text (everything before the first answer)
     const questionText = cleanedInput.split(/[A-D]\.\s*/)[0].trim();
 
     // Parse answers
-    const answers = matches.map((match, index) => ({
+    const answers = matches.map((match) => ({
       text: match[2].trim(),
       is_correct: false,
     }));
 
+    // Ensure 4 answers, even if some are missing
+    const fullAnswers = [
+      answers[0] || { text: "", is_correct: false },
+      answers[1] || { text: "", is_correct: false },
+      answers[2] || { text: "", is_correct: false },
+      answers[3] || { text: "", is_correct: false },
+    ];
+
     setNewQuestion({
       question_text: questionText,
-      answers:
-        answers.length > 0
-          ? answers
-          : [
-              { text: "", is_correct: false },
-              { text: "", is_correct: false },
-              { text: "", is_correct: false },
-              { text: "", is_correct: false },
-            ],
+      answers: fullAnswers,
     });
 
     // Reset raw input
