@@ -101,10 +101,18 @@ const QuizApp = () => {
   // Pagination handlers
   const nextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    document.getElementById("list").scrollIntoView({
+      behavior: "smooth", // Cuộn mượt
+      block: "start", // Canh đầu phần tử với đầu màn hình
+    });
   };
 
   const prevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
+    document.getElementById("list").scrollIntoView({
+      behavior: "smooth", // Cuộn mượt
+      block: "start", // Canh đầu phần tử với đầu màn hình
+    });
   };
 
   const handleAnswerSelect = (answer) => {
@@ -325,7 +333,9 @@ const QuizApp = () => {
 
         <div className="card">
           <div className="card-body">
-            <h5 className="card-title mb-4">Danh Sách Câu Hỏi</h5>
+            <h5 className="card-title mb-4" id="list">
+              Danh Sách Câu Hỏi
+            </h5>
             {currentQuestions.map((question) => (
               <div key={question.id} className="card mb-3">
                 <div className="card-body d-flex justify-content-between align-items-start">
