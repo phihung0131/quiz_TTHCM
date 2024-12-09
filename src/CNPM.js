@@ -54,28 +54,31 @@ const Cnpm = () => {
 
   const parseQuestionInput = () => {
     // Split the input into lines and trim each line
-    const lines = rawQuestionInput.split('\n').map(line => line.trim()).filter(line => line !== '');
-  
+    const lines = rawQuestionInput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+
     // First line is the question text
     const questionText = lines[0];
-  
+
     // Parse answers (assuming the next 4 lines are answers)
     const answers = lines.slice(1, 5).map((answerText, index) => ({
-      text: answerText.replace(/^[a-d]\.\s*/, '').trim(), // Remove a., b., c., d. prefixes
-      is_correct: false
+      text: answerText.replace(/^[a-d]\.\s*/, "").trim(), // Remove a., b., c., d. prefixes
+      is_correct: false,
     }));
-  
+
     // Ensure exactly 4 answers
     if (answers.length !== 4) {
       toast.error("Phải có đúng 4 đáp án!");
       return;
     }
-  
+
     setNewQuestion({
       question_text: questionText,
       answers: answers,
     });
-  
+
     // Reset raw input
     setRawQuestionInput("");
   };
@@ -159,7 +162,7 @@ const Cnpm = () => {
     //   return;
     // }
 
-    await supabase.from("questions").insert(newQuestion);
+    await supabase.from("cnpm").insert(newQuestion);
 
     toast.success("Thêm câu hỏi thành công!");
     fetchQuestions();
@@ -177,7 +180,7 @@ const Cnpm = () => {
   };
 
   const handleDeleteQuestion = async (id) => {
-    const { error } = await supabase.from("questions").delete().eq("id", id);
+    const { error } = await supabase.from("cnpm").delete().eq("id", id);
 
     if (!error) fetchQuestions();
   };
